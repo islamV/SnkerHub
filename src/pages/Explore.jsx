@@ -7,7 +7,7 @@ import { useFetchData } from '../api/fetchData';
 
 
 const Explore = () => {
-
+// console.log(localStorage.getItem('authToken'))
   const { data } = useFetchData();
 
   const products =data ? Object.values(data) : [];

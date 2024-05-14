@@ -19,10 +19,17 @@ const Cart = () => {
   }, [cart]);
 
   const checkout = () => {
-    toast.success("Order Placed Successfully");
-    localStorage.removeItem("localCart");
-    dispatch(checkoutCart());
-    navigate("/");
+    if (!localStorage.getItem('authToken') || !localStorage.getItem('user') ) {
+     toast.success("login  and try again");
+      navigate('/login') ;
+    }else{
+      const user = localStorage.getItem('user') ;
+      console.log(user) ;
+    }
+    // toast.success("Order Placed Successfully");
+    // localStorage.removeItem("localCart");
+    // dispatch(checkoutCart());
+    // navigate("/");
   };
   return (
     <div>

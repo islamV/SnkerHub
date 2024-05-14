@@ -4,9 +4,6 @@ const Login = () => {
     
     useEffect(()=>{
      const API_URL = 'https://generalapi.test/api/';
-   
-
-
 async function login() {
   try {
     // Login request with email and password

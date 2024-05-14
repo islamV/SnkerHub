@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_URL = 'https://generalapi.test/api';
+const API_URL = localStorage.getItem('API_URL');
 
 
 export const useFetchData = () => {
