@@ -1,380 +1,221 @@
-import React, {useEffect, useState} from 'react';
-import ReactDOM from 'react-dom';
 import axios from 'axios';
-import swal from 'sweetalert';
-import { useHistory } from 'react-router-dom';
-
-
-function Checkout()
-{
-
-    const history = useHistory();
-    if(!localStorage.getItem('auth_token')){
-        history.push('/');
-        swal("Warning","Login to goto Cart Page","error");
-    }
-    
-    const [loading, setLoading] = useState(true);
-    const [cart, setCart] = useState([]);
-    var totalCartPrice = 0;
-
-    const [checkoutInput, setCheckoutInput] = useState({
-        firstname: '',
-        lastname: '',
-        phone: '',
-        email: '',
-        address: '',
-        city: '',
-        state: '',
-        zipcode: '',
-    });
-    const [error, setError] = useState([]);
-
-    useEffect(() => {
-
-        let isMounted = true;
-
-        axios.get(`/api/cart`).then(res=>{
-            if(isMounted)
-            {
-                if(res.data.status === 200)
-                {
-                    setCart(res.data.cart);
-                    setLoading(false);
-                }
-                else if(res.data.status === 401)
-                {
-                    history.push('/');
-                    swal("Warning",res.data.message,"error");
-                }
-            }
-        }); 
+import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { clearCart } from '../redux/slices/CartSlice';
  
-        return () => {
-            isMounted = false
-        };
-    }, [history]);
+const CheckoutForm = () => {
+  const navigate = useNavigate();
 
-    const handleInput = (e) => {
-        e.persist();
-        setCheckoutInput({...checkoutInput, [e.target.name]: e.target.value });
-    }
+  const [formData, setFormData] = useState({
+    fname: '',
+    lname: '',
+    phone: '',
+    card_number: '',
+    mm_yy: '',
+    cvc: '',
+  });
 
-    var orderinfo_data = {
-        firstname: checkoutInput.firstname,
-        lastname: checkoutInput.lastname,
-        phone: checkoutInput.phone,
-        email: checkoutInput.email,
-        address: checkoutInput.address,
-        city: checkoutInput.city,
-        state: checkoutInput.state,
-        zipcode: checkoutInput.zipcode,
-        payment_mode: 'Paid by PayPal',
-        payment_id: '',
-    }
+  const [errors, setErrors] = useState({});
+  const cart = useSelector((state) => state.cart);
+  const [total, setTotal] = useState(0);
+  const url = localStorage.getItem('API_URL');
+const token  = localStorage.getItem('authToken');
 
-    // Paypal Code
-    const PayPalButton = window.paypal.Buttons.driver("react", { React, ReactDOM });
-    const createOrder = (data, actions) =>{
-        return actions.order.create({
-          purchase_units: [
-            {
-              amount: {
-                value: totalCartPrice,
-              },
-            },
-          ],
-        });
-    };
-    const onApprove = (data, actions) => {
-        // return actions.order.capture();
-        return actions.order.capture().then(function(details) {
-            console.log(details);
-            orderinfo_data.payment_id = details.id;
+  useEffect(() => {
+    setTotal(cart.reduce((total, item) => total + item.price * item.qty, 0));
+  }, [cart]);
 
-            axios.post(`/api/place-order`, orderinfo_data).then(res=>{
-                if(res.data.status === 200)
-                {
-                    swal("Order Placed Successfully",res.data.message,"success");
-                    setError([]);
-                    history.push('/thank-you');
-                }
-                else if(res.data.status === 422)
-                {
-                    swal("All fields are mandetory","","error");
-                    setError(res.data.errors);
-                }
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value,
+    });
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.fname) newErrors.fname = 'First name is required';
+    if (!formData.phone.match(/^\d{10}$/)) newErrors.phone = 'Phone number must be 10 digits';
+    if (!formData.card_number.match(/^\d{16}$/)) newErrors.card_number = 'Card number must be 16 digits';
+    if (!formData.mm_yy.match(/^(0[1-9]|1[0-2])\/?([0-9]{2})$/)) newErrors.mm_yy = 'MM/YY must be in MM/YY format';
+    if (!formData.cvc.match(/^\d{3}$/)) newErrors.cvc = 'CVC must be 3 digits';
+
+    return newErrors;
+  };
+  const dispatch = useDispatch();
+
+  const submissionData = {
+    ...formData,
+    details:JSON.stringify(cart),
+    total_price: total,
+  };
+//  console.log(submissionData) ;
+  const handleSubmit = async () => {
+    const newErrors = validate();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+    } else {
+      try {
+     
+        const config = {
+                headers: { 
+                  Accept : 'application/json' ,
+                  Authorization: `Bearer ${token}`
+               }  
+              };
+        const response = await axios.post(`${url}/v1/order/`, submissionData , config);
+
+        if (response.status === 200 || response.status === 201) {
+          dispatch(clearCart());
+          // console.log(response);
+        // toast.success(response.data.success);
+          navigate('done');
+        }else{
+          console.log(response);
+          
+        }
+      } catch (error) {
+        if (error.response) {
+          const status = error.response.status;
+          if (status === 422) {
+            const responseData = error.response.data;
+            const updatedErrors = {};
+            Object.keys(responseData.errors).forEach((field) => {
+              updatedErrors[field] = responseData.errors[field][0];
             });
-        });
-    };
-    // End-Paypal Code
-
-    const submitOrder = (e, payment_mode) => {
-        e.preventDefault();
-
-        var data = {
-            firstname: checkoutInput.firstname,
-            lastname: checkoutInput.lastname,
-            phone: checkoutInput.phone,
-            email: checkoutInput.email,
-            address: checkoutInput.address,
-            city: checkoutInput.city,
-            state: checkoutInput.state,
-            zipcode: checkoutInput.zipcode,
-            payment_mode: payment_mode,
-            payment_id: '',
-        }
-
-        switch (payment_mode) {
-            case 'cod':
-                axios.post(`/api/place-order`, data).then(res=>{
-                    if(res.data.status === 200)
-                    {
-                        swal("Order Placed Successfully",res.data.message,"success");
-                        setError([]);
-                        history.push('/thank-you');
-                    }
-                    else if(res.data.status === 422)
-                    {
-                        swal("All fields are mandetory","","error");
-                        setError(res.data.errors);
-                    }
-                });
-                break;
-
-            case 'razorpay':
-                axios.post(`/api/validate-order`, data).then(res=>{
-                    if(res.data.status === 200)
-                    {
-                        setError([]);
-                        var options = {
-                            "key": "rzp_test_5AEIUNtEJxBPvS",
-                            "amount": (1 * 100), 
-                            "name": "Funda Reat Ecom",
-                            "description": "Thank you for purchasing with Funda",
-                            "image": "https://example.com/your_logo",
-                            "handler": function (response){
-                                data.payment_id = response.razorpay_payment_id;
-
-                                axios.post(`/api/place-order`, data).then(place_res=>{
-                                    if(place_res.data.status === 200)
-                                    {
-                                        swal("Order Placed Successfully",place_res.data.message,"success");
-                                        history.push('/thank-you');
-                                    }
-                                });
-                            },
-                            "prefill": {
-                                "name": data.firstname + data.lastname,
-                                "email": data.email,
-                                "contact": data.phone
-                            },
-                            "theme": {
-                                "color": "#3399cc"
-                            }
-                        };
-                        var rzp = new window.Razorpay(options);
-                        rzp.open();
-                    }
-                    else if(res.data.status === 422)
-                    {
-                        swal("All fields are mandetory","","error");
-                        setError(res.data.errors);
-                    }
-                });
-                break;
-
-            case 'payonline':
-                axios.post(`/api/validate-order`, data).then(res=>{
-                    if(res.data.status === 200)
-                    {
-                        setError([]);
-                        var myModal = new window.bootstrap.Modal(document.getElementById('payOnlineModal'));
-                        myModal.show();
-                    }
-                    else if(res.data.status === 422)
-                    {
-                        swal("All fields are mandetory","","error");
-                        setError(res.data.errors);
-                    }
-                });
-                break;
-        
-            default:
-                break;
-        }
+            setErrors(updatedErrors);
+            console.error('Validation errors:', updatedErrors);
+          } else {
+            console.log(error.response.data) ;
+            toast.error('Error occurred');
+          
+          }
+        } else {
+          toast.error('Error occurred ');
        
+        }
+      }
     }
+  };
 
-    if(loading)
-    {
-        return <h4>Loading Checkout...</h4>
-    }
-
-    var checkout_HTML = '';
-    if(cart.length > 0)
-    {
-        checkout_HTML = <div>
-            <div className="row">
-
-            <div className="col-md-7">
-                <div className="card">
-                    <div className="card-header">
-                        <h4>Basic Information</h4>
-                    </div>
-                    <div className="card-body">
-
-                        <div className="row">
-                            <div className="col-md-6">
-                                <div className="mb-3 form-group">
-                                    <label> First Name</label>
-                                    <input type="text" name="firstname" onChange={handleInput} value={checkoutInput.firstname} className="form-control" />
-                                    <small className="text-danger">{error.firstname}</small>
-                                </div>
-                            </div>
-                            <div className="col-md-6">
-                                <div className="mb-3 form-group">
-                                    <label> Last Name</label>
-                                    <input type="text" name="lastname" onChange={handleInput} value={checkoutInput.lastname} className="form-control" />
-                                    <small className="text-danger">{error.lastname}</small>
-                                </div>
-                            </div>
-                            <div className="col-md-6">
-                                <div className="mb-3 form-group">
-                                    <label> Phone Number</label>
-                                    <input type="number" name="phone" onChange={handleInput} value={checkoutInput.phone} className="form-control" />
-                                    <small className="text-danger">{error.phone}</small>
-                                </div>
-                            </div>
-                            <div className="col-md-6">
-                                <div className="mb-3 form-group">
-                                    <label> Email Address</label>
-                                    <input type="email" name="email" onChange={handleInput} value={checkoutInput.email} className="form-control" />
-                                    <small className="text-danger">{error.email}</small>
-                                </div>
-                            </div>
-                            <div className="col-md-12">
-                                <div className="mb-3 form-group">
-                                    <label> Full Address</label>
-                                    <textarea rows="3" name="address" onChange={handleInput} value={checkoutInput.address} className="form-control"></textarea>
-                                    <small className="text-danger">{error.address}</small>
-                                </div>
-                            </div>
-                            <div className="col-md-4">
-                                <div className="mb-3 form-group">
-                                    <label>City</label>
-                                    <input type="text" name="city" onChange={handleInput} value={checkoutInput.city} className="form-control" />
-                                    <small className="text-danger">{error.city}</small>
-                                </div>
-                            </div>
-                            <div className="col-md-4">
-                                <div className="mb-3 form-group">
-                                    <label>State</label>
-                                    <input type="text" name="state" onChange={handleInput} value={checkoutInput.state} className="form-control" />
-                                    <small className="text-danger">{error.state}</small>
-                                </div>
-                            </div>
-                            <div className="col-md-4">
-                                <div className="mb-3 form-group">
-                                    <label>Zip Code</label>
-                                    <input type="text" name="zipcode" onChange={handleInput} value={checkoutInput.zipcode} className="form-control" />
-                                    <small className="text-danger">{error.zipcode}</small>
-                                </div>
-                            </div>
-                            <div className="col-md-12">
-                                <div className="form-group text-end">
-                                    <button type="button" className="mx-1 btn btn-primary" onClick={ (e) => submitOrder(e, 'cod') }>Place Order</button>
-                                    <button type="button" className="mx-1 btn btn-primary" onClick={ (e) => submitOrder(e, 'razorpay') }>Pay by Razorpay</button>
-                                    <button type="button" className="mx-1 btn btn-warning" onClick={ (e) => submitOrder(e, 'payonline') }>Pay Online</button>
-
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
+  return (
+    <div className="container flex flex-col h-screen p-4 mx-auto">
+      <div className="flex flex-col w-full h-full md:flex-row md:space-x-10">
+        <div className="flex-grow px-8 pt-6 pb-8 bg-white rounded shadow-md checkout-form md:w-full">
+          <div className="mb-4 form-section">
+            <h2 className="mb-4 text-2xl font-bold">Customer Info</h2>
+            <div className="md:flex md:space-x-4">
+              <div className="mb-4 form-row md:w-1/2">
+                <label className="block mb-2 text-sm font-bold text-gray-700">First Name:</label>
+                <input
+                  type="text"
+                  name="fname"
+                  value={formData.fname}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 leading-tight text-gray-700 border rounded shadow appearance-none focus:outline-none focus:shadow-outline"
+                />
+                {errors.fname && <p className="text-xs italic text-red-500">{errors.fname}</p>}
+              </div>
+              <div className="mb-4 form-row md:w-1/2">
+                <label className="block mb-2 text-sm font-bold text-gray-700">Last Name:</label>
+                <input
+                  type="text"
+                  name="lname"
+                  value={formData.lname}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 leading-tight text-gray-700 border rounded shadow appearance-none focus:outline-none focus:shadow-outline"
+                />
+              </div>
             </div>
-
-            <div className="col-md-5">
-                <table className="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th width="50%">Product</th>
-                            <th>Price</th>
-                            <th>Qty</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {cart.map( (item, idx) => {
-                            totalCartPrice += item.product.selling_price * item.product_qty;
-                            return (
-                                <tr key={idx}>
-                                    <td>{item.product.name}</td>
-                                    <td>{item.product.selling_price}</td>
-                                    <td>{item.product_qty}</td>
-                                    <td>{item.product.selling_price * item.product_qty}</td>
-                                </tr>
-                            )
-                        })}
-                        <tr>
-                            <td colSpan="2" className="text-end fw-bold">Grand Total</td>
-                            <td colSpan="2" className="text-end fw-bold">{totalCartPrice}</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div className="md:flex md:space-x-4">
+              <div className="mb-4 form-row md:w-1/2">
+                <label className="block mb-2 text-sm font-bold text-gray-700">Your Phone:</label>
+                <input
+                  type="text"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 leading-tight text-gray-700 border rounded shadow appearance-none focus:outline-none focus:shadow-outline"
+                />
+                {errors.phone && <p className="text-xs italic text-red-500">{errors.phone}</p>}
+              </div>
             </div>
+          </div>
 
+          <div className="mb-4 form-section">
+            <h2 className="mb-4 text-2xl font-bold">Payment Info</h2>
+            <div className="mb-4 form-row">
+              <label className="block mb-2 text-sm font-bold text-gray-700">Credit Card Number:</label>
+              <input
+                type="text"
+                name="card_number"
+                value={formData.card_number}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 leading-tight text-gray-700 border rounded shadow appearance-none focus:outline-none focus:shadow-outline"
+              />
+              {errors.card_number && <p className="text-xs italic text-red-500">{errors.card_number}</p>}
             </div>
+            <div className="md:flex md:space-x-4">
+              <div className="mb-4 form-row md:w-1/2">
+                <label className="block mb-2 text-sm font-bold text-gray-700">Month/Year:</label>
+                <input
+                  type="text"
+                  name="mm_yy"
+                  placeholder="MM/YY"
+                  value={formData.mm_yy}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 leading-tight text-gray-700 border rounded shadow appearance-none focus:outline-none focus:shadow-outline"
+                />
+                {errors.mm_yy && <p className="text-xs italic text-red-500">{errors.mm_yy}</p>}
+              </div>
+              <div className="mb-4 form-row md:w-1/2">
+                <label className="block mb-2 text-sm font-bold text-gray-700">CVC:</label>
+                <input
+                  type="text"
+                  name="cvc"
+                  value={formData.cvc}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 leading-tight text-gray-700 border rounded shadow appearance-none focus:outline-none focus:shadow-outline"
+                />
+                {errors.cvc && <p className="text-xs italic text-red-500">{errors.cvc}</p>}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            className="px-4 py-2 font-bold text-white bg-green-600 rounded hover:bg-green-700 focus:outline-none focus:shadow-outline"
+          >
+            Complete Checkout and Pay
+          </button>
         </div>
-    }
-    else
-    {
-        checkout_HTML = <div>
-            <div className="py-5 text-center shadow-sm card card-body">
-                <h4>Your Shopping Cart is Empty. You are in Checkout Page.</h4>
-            </div>
+
+        <div className="px-8 pt-6 pb-8 mb-4 bg-white rounded shadow-md cart md:w-1/3">
+          <h2 className="mb-4 text-2xl font-bold">Current Cart</h2>
+          <ul className="mb-4 list-disc list-inside">
+            {cart.map((item, index) => (
+              <li key={index} className="flex items-center mb-2">
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  className="w-12 h-12 mr-4"
+                  height="84px" width="56px"
+                />
+                <div>
+                  {item.name} <br /> <span className="font-bold">${item.price}</span> x{item.qty}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xl font-bold">CART TOTALS <span>${total}</span></p>
         </div>
-    }
+      </div>
+    </div>
+  );
+};
 
-    return (
-        <div>
-
-            <div class="modal fade" id="payOnlineModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLabel">Online Payment Mode</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <hr/>
-                        <PayPalButton
-                            createOrder={(data, actions) => createOrder(data, actions)}
-                            onApprove={(data, actions) => onApprove(data, actions)}
-                        />
-                    </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="py-3 bg-warning">
-                <div className="container">
-                    <h6>Home / Checkout</h6>
-                </div>
-            </div>
-
-            <div className="py-4">
-                <div className="container">
-                   {checkout_HTML}
-                </div>
-            </div>
-
-        </div>
-    )
-}
-
-
-
-export default Checkout;
-
+export default CheckoutForm;

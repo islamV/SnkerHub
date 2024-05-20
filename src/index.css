@@ -27,3 +27,21 @@ body {
     }
   }
 }
+/* src/index.css */
+:root {
+  --color-bg: #ffffff;
+  --color-text: #000000;
+  --color-primary: #1da1f2;
+}
+
+[data-theme='dark'] {
+  --color-bg: #121212;
+  --color-text: #ffffff;
+  --color-primary: #1da1f2;
+}
+
+[data-theme='light'] {
+  --color-bg: #ffffff;
+  --color-text: #000000;
+  --color-primary: #1da1f2;
+}

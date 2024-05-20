@@ -1,34 +1,36 @@
-
 import React, { useState, useEffect } from 'react';
-
-import PreviewCard from "../components/PreviewCard";
 import { useParams } from "react-router-dom";
-import { useFetchData } from '../api/fetchData';
+import { findProduct } from '../api/fetchData';
+import PreviewCard from "../components/PreviewCard";
 
-
-const Preview = (props) => {
+const Preview = () => {
   const { id } = useParams();
-  const productId = Number(id);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const { data } = useFetchData();
+  useEffect(() => {
+    const fetchProductData = async () => {
+      try {
+        const data = await findProduct(id);
+        setProduct({ ...data, qty: 1 });
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching product data", error);
+        setError(error);
+        setLoading(false);
+      }
+    };
 
-  const products =data ? Object.values(data) : [];
+    fetchProductData();
+  }, [id]);
 
-  // const products=  data.products ;
-  const filteredItems =products.filter(
-    (s) => s.price !==  null 
-  );
-
-  const qtyUpdate = filteredItems.map((item) => {
-    return { ...item, qty: 1 };
-  });
-
-  const items = qtyUpdate.filter((item) => item.id === productId);
-  const product = items[0];
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error fetching product data</div>;
 
   return (
     <div className="">
-      <PreviewCard product={product} />
+      {product && <PreviewCard product={product} />}
     </div>
   );
 };

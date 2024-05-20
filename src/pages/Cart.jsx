@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import CartCard from "../components/CartCard";
 import { useSelector, useDispatch } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { checkoutCart } from "../redux/slices/CartSlice";
+// import { checkoutCart } from "../redux/slices/CartSlice";
 
 import toast from "react-hot-toast";
 
@@ -14,17 +14,16 @@ const Cart = () => {
   const navigate = useNavigate();
   useEffect(() => {
     setTotal(
-      cart.reduce((acc, curr) => acc + curr.price * curr.qty, 0)
+      cart.reduce((total, item) => total + item.price * item.qty, 0)
     );
   }, [cart]);
 
   const checkout = () => {
     if (!localStorage.getItem('authToken') || !localStorage.getItem('user') ) {
-     toast.success("login  and try again");
+     toast.error("login  and try again");
       navigate('/login') ;
     }else{
-      const user = localStorage.getItem('user') ;
-      console.log(user) ;
+      navigate('/checkout') 
     }
     // toast.success("Order Placed Successfully");
     // localStorage.removeItem("localCart");
@@ -64,7 +63,8 @@ const Cart = () => {
                     TOTAL ITEMS : {cart.length}
                   </h1>
                   <h1 className="text-xl font-bold dark:text-white md:text-5xl text-slate-500">
-                    TOTAL PRICE : ₹ {total}
+                    {/* TOTAL PRICE : ₹ {total} */}
+                    TOTAL PRICE : $ {total}
                   </h1>
                 </div>
                 <div>

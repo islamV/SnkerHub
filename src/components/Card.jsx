@@ -8,7 +8,8 @@ const Card = ({ product }) => {
   const cart = useSelector((state) => state.cart);
     // console.log(product.id);
   // const img = "https://generalapi.test/storage/"+ product.image;
-  const img ="https://image.goat.com/750/attachments/product_template_pictures/images/020/249/059/original/485842_00.png.png";
+  const img =product.image;
+  // console.log(img) ;
 
   const price = product.price;
   const desc = product.description;

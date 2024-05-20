@@ -21,60 +21,67 @@ const Register = ()=> {
         Accept : 'application/json' ,
     }
    }
-    const handleSignUp = async () => {
-        const errors = {};
-        if (!name.trim()) {
-            errors.name = "Name is required";
-        }
-        if (!email.trim()) {
-            errors.email = "Email is required";
-        } else if (!/\S+@\S+\.\S+/.test(email)) {
-            errors.email = "Invalid email address";
-        }
-        // if (!phone.trim()) {
-        //     errors.phone = "Phone is required";
-        // } else if (!/^\d{10}$/.test(phone)) {
-        //     errors.phone = "Invalid phone number";
-        // }
-        if (!password.trim()) {
-            errors.password = "Password is required";
-        }
-        if (!passwordConfirmation.trim()) {
-            errors.passwordConfirmation = "Password confirmation is required";
-        } else if (passwordConfirmation !== password) {
-            errors.passwordConfirmation = "Passwords do not match";
-        }
+   const handleSignUp = async () => {
+    const errors = {};
 
-        if (Object.keys(errors).length === 0) {
-            try {
-                const SignUpResponse = await axios.post(API_URL+ '/register', {
-                    name :name ,
-                    email: email,
-                    // phone :phone ,
-                    password: password,
-                    password_confirmation :passwordConfirmation
-                });
-    
-                if (SignUpResponse.status === 200 || SignUpResponse.status === 201) {
-                    const data = SignUpResponse.data;
-                    if (data.token) {
-                        toast.success('You  created new with us  thank you . login and Enjoy!');
-                        navigate("/");
-                    } else {
-                        toast.error(data.error);
-                    }
-                } else {
-                    toast.error('register failed');
-                }
-            } catch (error) {
-                toast.error('Error occurred during register');
-                console.error('Error during register', error);
-            }
-        } else {
-            // If there are errors, update the state to display them
-            setErrors(errors);
-        }
+    if (!name.trim()) {
+        errors.name = "Name is required";
     }
+    if (!email.trim()) {
+        errors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+        errors.email = "Invalid email address";
+    }
+    if (!password.trim()) {
+        errors.password = "Password is required";
+    }
+    if (!passwordConfirmation.trim()) {
+        errors.passwordConfirmation = "Password confirmation is required";
+    } else if (passwordConfirmation !== password) {
+        errors.passwordConfirmation = "Passwords do not match";
+    }
+
+    if (Object.keys(errors).length === 0) {
+        try {
+            const SignUpResponse = await axios.post(API_URL+ '/register', {
+                name: name,
+                email: email,
+                password: password,
+                password_confirmation: passwordConfirmation
+            });
+
+            if (SignUpResponse.status === 200 || SignUpResponse.status === 201) {
+                const data = SignUpResponse.data;
+                if (data.token) {
+                    toast.success('You created a new account with us. Thank you. Login and Enjoy!');
+                    navigate("/");
+                } else {
+                    toast.error(data.error || 'Error occurred during registration');
+                }
+            } else {
+                toast.error('Registration failed');
+            }
+        } catch (error) {
+            if (error.response && error.response.status === 422) {
+                // Handle 422 error, usually validation errors
+                const responseData = error.response.data;
+                // Example handling, you may adjust as per your server response
+                Object.keys(responseData.errors).forEach(field => {
+                    errors[field] = responseData.errors[field][0];
+                });
+                setErrors(errors);
+            } else {
+                // Handle other errors
+                toast.error('Error occurred during registration');
+                console.error('Error during registration', error);
+            }
+        }
+    } else {
+        // If there are errors, update the state to display them
+        setErrors(errors);
+    }
+};
+
     
  
  

@@ -1,0 +1,139 @@
+.container {
+  display: flex;
+  justify-content: space-between;
+  font-family: Arial, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.checkout-form {
+  flex: 2;
+  margin-right: 20px;
+}
+
+h2 {
+  font-size: 1.5em;
+  margin-top: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
+
+label {
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+input, select {
+  padding: 8px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+input[type="checkbox"] {
+  width: auto;
+  margin-left: 10px;
+}
+
+button {
+  padding: 15px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 18px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+button:hover {
+  background-color: #218838;
+}
+
+.cart {
+  flex: 1;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
+
+.cart h2 {
+  font-size: 1.5em;
+  margin-top: 0;
+}
+
+.cart ul {
+  list-style: none;
+  padding: 0;
+}
+
+.cart ul li {
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.cart p {
+  font-size: 1.2em;
+  font-weight: bold;
+  margin-top: 20px;
+}
+
+.shipping-options, .discount-code {
+  margin-bottom: 20px;
+}
+
+.shipping-options select {
+  width: 100%;
+}
+
+.discount-code {
+  display: flex;
+  align-items: center;
+}
+
+.discount-code input {
+  width: calc(100% - 70px);
+  margin-right: 10px;
+}
+
+.discount-code button {
+  width: 60px;
+  padding: 8px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.discount-code button:hover {
+  background-color: #0056b3;
+}
+
+.form-section {
+  margin-bottom: 30px;
+}
+
+.two-column {
+  display: flex;
+  justify-content: space-between;
+}
+
+.two-column .form-row {
+  flex: 1;
+  margin-right: 10px;
+}
+
+.two-column .form-row:last-child {
+  margin-right: 0;
+}
